@@ -2,7 +2,10 @@ extern crate libc;
 use libc::{c_char, size_t};
 use msyt::converter::MsytFile;
 use std::{
-    f64::consts::E, ffi::{CStr, CString}, fs, io, panic::{self, AssertUnwindSafe}
+    f64::consts::E,
+    ffi::{CStr, CString},
+    fs, io,
+    panic::{self, AssertUnwindSafe},
 };
 
 extern "C" {
@@ -70,42 +73,45 @@ impl MsbtCpp {
         ))
     }
     pub fn from_binary(binary: &[u8]) -> io::Result<Self> {
+        if binary.is_empty() {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "Msbt Binary data is empty",
+            ));
+        }
         let endian = Self::check_endianness(&binary.to_vec());
 
         if let Some(e) = &endian {
-            match e {
-                roead::Endian::Big => match MsytFile::binary_to_text_safe(binary.to_vec()) {
-                    Ok(text) => {
+            if e == &roead::Endian::Little {
+                let result = panic::catch_unwind(AssertUnwindSafe(|| unsafe {
+                    unsafe { binary_to_string_rust(binary) }
+                }));
+                if let Ok(text) = result {
+                    if !text.is_empty() {
                         return Ok(MsbtCpp {
                             text,
                             binary: binary.to_vec(),
                             endian,
                         });
                     }
-                    Err(e) => {
-                        return Err(e);
-                    }
-                },
-                roead::Endian::Little => {
-                    let result = panic::catch_unwind(AssertUnwindSafe(|| unsafe {
-                        unsafe { binary_to_string_rust(binary) }
-                    }));
-
-                    match result {
-                        Ok(text) => {
-                            return Ok(MsbtCpp {
-                                text,
-                                binary: binary.to_vec(),
-                                endian,
-                            });
-                        }
-                        Err(err) => {return Err(io::Error::new(io::ErrorKind::InvalidData, format!("Error: {:?}", err)));}
-                    }
-
                 }
             }
+            if let Ok(text) = MsytFile::binary_to_text_safe(binary.to_vec()) {
+                if !text.is_empty() {
+                    return Ok(MsbtCpp {
+                        text,
+                        binary: binary.to_vec(),
+                        endian,
+                    });
+                }
+            }
+
+            
         }
-        return Err(io::Error::new(io::ErrorKind::InvalidData, "Unable to process msbt from binary"));
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            "Unable to process msbt from binary nor determine endianness",
+        ));
 
         // let result = panic::catch_unwind(AssertUnwindSafe(|| unsafe {
         //     unsafe { binary_to_string_rust(binary) }
