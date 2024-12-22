@@ -1,0 +1,3 @@
+[submodule "msbt_bindings_cs/MessageStudio"]
+	path = msbt_bindings_cs/MessageStudio
+	url = https://github.com/EPD-Libraries/MessageStudio.git

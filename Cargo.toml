@@ -10,7 +10,8 @@ libc = "0.2"
 cc = "1.0"
 bindgen = "0.69.4"
 msyt = { git = "https://github.com/SolidLink95/msyt-lib" }
-roead = { version = "0.25.1", features = ["yaml", "sarc", "byml"] }
+roead = { version = "1.0.0", features = ["yaml", "sarc", "byml"] }
+#roead = { version = "0.25.1", features = ["yaml", "sarc", "byml"] }
 
 [build-dependencies]
 cc = "1.0"
