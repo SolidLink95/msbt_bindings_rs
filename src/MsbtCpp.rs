@@ -1,6 +1,7 @@
 extern crate libc;
 use libc::{c_char, size_t};
 use msyt::converter::MsytFile;
+use byteorder;
 use std::{
     f64::consts::E,
     ffi::{CStr, CString},
@@ -35,11 +36,11 @@ pub unsafe fn binary_to_string_rust(binary: &[u8]) -> String {
 pub struct MsbtCpp {
     pub text: String,
     pub binary: Vec<u8>,
-    pub endian: Option<roead::Endian>,
+    pub endian: Option<String>,
 }
 
 impl MsbtCpp {
-    pub fn from_text(text: &str, endian: roead::Endian) -> io::Result<Self> {
+    pub fn from_text(text: &str, endian: String) -> io::Result<Self> {
         let result = panic::catch_unwind(AssertUnwindSafe(|| unsafe {
             unsafe { string_to_binary_rust(text) }
         }));
@@ -82,7 +83,7 @@ impl MsbtCpp {
         let endian = Self::check_endianness(&binary.to_vec());
 
         if let Some(e) = &endian {
-            if e == &roead::Endian::Little {
+            if e == "LE" {
                 let result = panic::catch_unwind(AssertUnwindSafe(|| unsafe {
                     unsafe { binary_to_string_rust(binary) }
                 }));
@@ -157,7 +158,7 @@ impl MsbtCpp {
                     Ok(t) => t,
                     Err(e) => return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, e)),
                 };
-                Ok(MsbtCpp::from_text(&text, roead::Endian::Little)?)
+                Ok(MsbtCpp::from_text(&text, "LE".to_string())?)
             }
             Err(e) => Err(e),
         }
@@ -171,12 +172,12 @@ impl MsbtCpp {
         fs::write(file_path, &self.text)
     }
 
-    fn check_endianness(bytes: &Vec<u8>) -> Option<roead::Endian> {
+    fn check_endianness(bytes: &Vec<u8>) -> Option<String> {
         if bytes.len() >= 10 {
             // Ensure there are at least 10 bytes to check
             match bytes[8..10] {
-                [0xFE, 0xFF] => Some(roead::Endian::Big),    // Big Endian
-                [0xFF, 0xFE] => Some(roead::Endian::Little), // Little Endian
+                [0xFE, 0xFF] => Some("BE".to_string()),    // Big Endian
+                [0xFF, 0xFE] => Some("LE".to_string()), // Little Endian
                 _ => None,                                   // Not matching either pattern
             }
         } else {
